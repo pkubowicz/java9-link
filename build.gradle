@@ -3,6 +3,8 @@ apply plugin: 'application'
 
 final jdk9Home = "/usr/lib/jvm/jdk-9"
 mainClassName = 'example.server.Runner'
+sourceCompatibility = JavaVersion.VERSION_1_9
+
 
 repositories {
     jcenter()
@@ -11,20 +13,10 @@ repositories {
 dependencies {
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_9
-
-if (sourceCompatibility == JavaVersion.VERSION_1_9) {
-    tasks.withType(JavaCompile) {
-        options.fork = true
-        options.forkOptions.executable = "${jdk9Home}/bin/javac"
-    }
-} else {
-    sourceSets.main.java.exclude("**/module-info.java")
-}
-
 task customJre(dependsOn: jar) {
     def outputPath = "${buildDir}/custom-jre"
     ext.output = file(outputPath)
+
     doLast {
         delete output
         exec {
@@ -42,6 +34,16 @@ task customJre(dependsOn: jar) {
     }
 }
 
+if (sourceCompatibility == JavaVersion.VERSION_1_9) {
+    tasks.withType(JavaCompile) {
+        options.fork = true
+        options.forkOptions.executable = "${jdk9Home}/bin/javac"
+    }
+} else {
+    sourceSets.main.java.exclude("**/module-info.java")
+    customJre.enabled = false
+}
+
 jar {
     manifest {
         attributes('Main-Class': mainClassName)
@@ -53,7 +55,7 @@ clean {
     delete 'build/docker'
 }
 
-task copyFilesForDocker(type: Copy, dependsOn: jar) {
+task copyFilesForDocker(type: Copy, dependsOn: [customJre, jar]) {
     from file('Dockerfile')
     from file('Dockerfile-9')
     from(tasks.jar)
