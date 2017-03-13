@@ -1,9 +1,8 @@
 apply plugin: 'java-library'
-apply plugin: 'application'
 
 final jdk9Home = "/usr/lib/jvm/jdk-9"
-mainClassName = 'example.server.Runner'
-sourceCompatibility = JavaVersion.VERSION_1_9
+final mainClassName = 'example.server.Runner'
+sourceCompatibility = project.hasProperty('javaVersion') ? project.javaVersion : JavaVersion.VERSION_1_9
 
 
 repositories {
@@ -16,6 +15,9 @@ dependencies {
 task customJre(dependsOn: jar) {
     def outputPath = "${buildDir}/custom-jre"
     ext.output = file(outputPath)
+
+    inputs.file jar.archivePath
+    outputs.dir outputPath
 
     doLast {
         delete output
@@ -33,6 +35,7 @@ task customJre(dependsOn: jar) {
         }
     }
 }
+build.dependsOn customJre
 
 if (sourceCompatibility == JavaVersion.VERSION_1_9) {
     tasks.withType(JavaCompile) {
@@ -66,8 +69,10 @@ task copyFilesForDocker(type: Copy, dependsOn: [customJre, jar]) {
 }
 
 task image(dependsOn: copyFilesForDocker) {
+    def imageName = "${project.name}:jre${sourceCompatibility.majorVersion}"
+    group = 'Build'
+    description = "Build Docker image $imageName"
     doLast {
-        def imageName = "${project.name}:jre${sourceCompatibility.majorVersion}"
         exec {
             executable 'docker'
             args = ['build', '-t', imageName]
