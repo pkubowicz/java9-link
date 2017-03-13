@@ -1,5 +1,7 @@
 # copied from https://github.com/docker-library/openjdk/blob/445f8b8d18d7c61e2ae7fda76d8883b5d51ae0a5/8-jre/Dockerfile
-FROM buildpack-deps:jessie-curl
+#FROM buildpack-deps:jessie-curl
+# ideally alpine:3.5 but currently OpenJDK depends on glibc
+FROM frolvlad/alpine-glibc
 
 EXPOSE 8000
 

@@ -1,5 +1,6 @@
 # https://hub.docker.com/_/openjdk/
-FROM openjdk:8-jre
+#FROM openjdk:8-jre
+FROM openjdk:8-jre-alpine
 
 EXPOSE 8000
 
