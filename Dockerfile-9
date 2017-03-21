@@ -6,4 +6,4 @@ EXPOSE 8000
 COPY custom-jre/ /home/server
 
 WORKDIR /home/server
-CMD ["bin/java", "-m", "example.server/example.server.Runner"]
+CMD ["bin/java", "-m", "example.greeter.server/example.greeter.server.Runner"]

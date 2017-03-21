@@ -3,7 +3,7 @@ FROM openjdk:8-jre
 
 EXPOSE 8000
 
-COPY java9-link.jar /home/server/
+COPY greeter-server-all.jar /home/server/
 
 WORKDIR /home/server
-CMD ["java", "-jar", "java9-link.jar", "8000"]
+CMD ["java", "-jar", "greeter-server-all.jar", "8000"]

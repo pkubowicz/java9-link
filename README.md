@@ -13,7 +13,7 @@ Running custom JRE directly:
 
 ```
 gradle build
-./build/custom-jre/bin/java -m example.server/example.server.Runner
+./build/custom-jre/bin/java -m example.greeter.server/example.greeter.server.Runner
 ```
 
 Checking against Java 8:
@@ -27,5 +27,5 @@ or
 
 ```
 gradle build -PjavaVersion=1.8
-java -jar build/libs/java9-link.jar
+java -jar greeter-server/build/libs/greeter-server-all.jar
 ```

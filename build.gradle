@@ -1,82 +1,106 @@
-apply plugin: 'java-library'
+plugins {
+    id 'com.github.johnrengelman.shadow' version '1.2.4' apply false
+}
 
 final jdk9Home = "/usr/lib/jvm/jdk-9"
-final mainClassName = 'example.server.Runner'
-sourceCompatibility = project.hasProperty('javaVersion') ? project.javaVersion : JavaVersion.VERSION_1_9
+final javaVersion = project.hasProperty('javaVersion') ? JavaVersion.toVersion(project.javaVersion)
+        : JavaVersion.VERSION_1_9
+final customJreOutput = file("${buildDir}/custom-jre")
 
-
-repositories {
-    jcenter()
-}
-
-dependencies {
-}
-
-task customJre(dependsOn: jar) {
-    def outputPath = "${buildDir}/custom-jre"
-    ext.output = file(outputPath)
-
-    inputs.file jar.archivePath
-    outputs.dir outputPath
-
-    doLast {
-        delete output
-        exec {
-            executable "${jdk9Home}/bin/jlink"
-            args = ['--module-path', "$jdk9Home/jmods:${jar.archivePath}", '--add-modules', 'example.server',
-                    '--output', outputPath,
-                    '--compress=2', '--strip-debug'
-            ]
-        }
-        // fix non-writable files in legal/
-        exec {
-            executable 'chmod'
-            args = ['u+w', '-R', outputPath]
-        }
+subprojects {
+    apply plugin: 'java'
+    if (project.name == 'greeter-server') {
+        apply plugin: 'com.github.johnrengelman.shadow'
     }
-}
-build.dependsOn customJre
 
-if (sourceCompatibility == JavaVersion.VERSION_1_9) {
-    tasks.withType(JavaCompile) {
-        options.fork = true
-        options.forkOptions.executable = "${jdk9Home}/bin/javac"
+    sourceCompatibility = javaVersion
+
+    repositories {
+        jcenter()
     }
-} else {
-    sourceSets.main.java.exclude("**/module-info.java")
-    customJre.enabled = false
-}
 
-jar {
-    manifest {
-        attributes('Main-Class': mainClassName)
+    dependencies {
     }
 }
 
-clean {
+task clean(type: Delete) {
     delete 'build/custom-jre'
     delete 'build/docker'
 }
 
-task copyFilesForDocker(type: Copy, dependsOn: [customJre, jar]) {
-    from file('Dockerfile')
-    from file('Dockerfile-9')
-    from(tasks.jar)
-    from(customJre.output) {
-        into "custom-jre"
+task build
+
+if (javaVersion == JavaVersion.VERSION_1_9) {
+    subprojects {
+        tasks.withType(JavaCompile) {
+            options.fork = true
+            options.forkOptions.executable = "${jdk9Home}/bin/javac"
+            options.compilerArgs = ['--module-path', rootProject.file('greeter-protocol/build/libs')]
+            doLast {
+                def compileOpts = file('build/tmp/compileJava/java-compiler-args.txt').text.replaceAll("\n", " ")
+                logger.lifecycle "${options.forkOptions.executable} ${compileOpts}"
+            }
+        }
     }
-    into 'build/docker'
+    task customJre(dependsOn: project(':greeter-server').tasks.jar) {
+        ext.appModulePaths = [project(':greeter-protocol').libsDir,
+                              project(':greeter-server').libsDir]
+
+        outputs.dir customJreOutput
+        ext.appModulePaths.each { outputs.dir it }
+
+        doLast {
+            delete customJreOutput
+            exec {
+                executable "${jdk9Home}/bin/jlink"
+                args = ['--module-path', (["$jdk9Home/jmods"] + ext.appModulePaths).grep().join(':'),
+                        '--add-modules', 'example.greeter.server',
+                        '--output', customJreOutput,
+                        '--compress=2', '--strip-debug'
+                ]
+                logger.lifecycle commandLine.join(' ')
+            }
+            // fix non-writable files in legal/
+            exec {
+                executable 'chmod'
+                args = ['u+w', '-R', customJreOutput]
+            }
+        }
+    }
+    build.dependsOn customJre
+
+    task copyFilesForDocker(type: Sync, dependsOn: [customJre]) {
+        from file('Dockerfile-9')
+        from(customJreOutput) {
+            into "custom-jre"
+        }
+        into 'build/docker'
+    }
+} else {
+    subprojects {
+        sourceSets.main.java.exclude("**/module-info.java")
+    }
+    def shadowJarTask = project(':greeter-server').tasks.shadowJar
+    build.dependsOn shadowJarTask
+
+    task copyFilesForDocker(type: Sync, dependsOn: [shadowJarTask]) {
+        from file('Dockerfile')
+        from(shadowJarTask)
+        into 'build/docker'
+    }
 }
 
+
 task image(dependsOn: copyFilesForDocker) {
-    def imageName = "${project.name}:jre${sourceCompatibility.majorVersion}"
+    def imageName = "${project.name}:jre${javaVersion.majorVersion}"
     group = 'Build'
     description = "Build Docker image $imageName"
     doLast {
         exec {
             executable 'docker'
             args = ['build', '-t', imageName]
-            if (sourceCompatibility == JavaVersion.VERSION_1_9) {
+//            args += ['--pull']
+            if (javaVersion == JavaVersion.VERSION_1_9) {
                 args += ['--file', 'Dockerfile-9']
             }
             args += ['.']

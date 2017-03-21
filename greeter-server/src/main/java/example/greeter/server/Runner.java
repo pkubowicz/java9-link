@@ -1,7 +1,8 @@
-package example.server;
+package example.greeter.server;
+
+import example.greeter.protocol.Protocol;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -9,21 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Runner {
-    private static class Protocol {
-        String processInput(String input) {
-            if (input.toLowerCase().contains("stats")) {
-                return "I have " + Runtime.getRuntime().availableProcessors() + " processors";
-            } else if (input.toLowerCase().contains("get")) {
-                File readme = new File("README.md");
-                if (readme.exists()) {
-                    return Long.toString(readme.getTotalSpace()); // TODO read from file
-                } else {
-                    return "No readme";
-                }
-            }
-            return "Hello " + input;
-        }
-    }
 
     public static void main(String[] args) {
         int portNumber = args.length > 0 ? Integer.parseInt(args[0]) : 8000;
@@ -39,18 +25,16 @@ public class Runner {
                              new PrintWriter(clientSocket.getOutputStream(), true);
                      BufferedReader in = new BufferedReader(
                              new InputStreamReader(clientSocket.getInputStream()))) {
-                    out.println("What is your name?");
+                    out.println(protocol.startConversation());
                     String inputLine, outputLine;
                     while ((inputLine = in.readLine()) != null) {
-                        if (inputLine.toLowerCase().contains("bye")) {
-                            out.println("Bye");
-                            break;
-                        }
                         outputLine = protocol.processInput(inputLine);
                         out.println(outputLine);
+                        if (!protocol.isInProgress()) {
+                            break;
+                        }
                     }
                 }
-
             }
         } catch (IOException e) {
             e.printStackTrace();

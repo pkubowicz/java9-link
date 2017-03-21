@@ -1,0 +1,17 @@
+final mainClassName = 'example.greeter.server.Runner'
+
+dependencies {
+    compile project(':greeter-protocol')
+}
+
+compileJava.dependsOn project(':greeter-protocol').tasks.jar
+
+jar {
+    manifest {
+        attributes('Main-Class': mainClassName)
+    }
+}
+
+shadowJar {
+    exclude 'module-info.class'
+}
