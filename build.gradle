@@ -31,11 +31,18 @@ task clean(type: Delete) {
 task build
 
 if (javaVersion == JavaVersion.VERSION_1_9) {
+    def dependenciesDir = rootProject.file('build/dependencies')
     subprojects {
+        task copyDependenciesAsModules(type: Sync) {
+            from configurations.runtime
+            into dependenciesDir
+        }
+
         tasks.withType(JavaCompile) {
+            dependsOn copyDependenciesAsModules
             options.fork = true
             options.forkOptions.executable = "${jdk9Home}/bin/javac"
-            options.compilerArgs = ['--module-path', rootProject.file('greeter-protocol/build/libs')]
+            options.compilerArgs = ['--module-path', [rootProject.file('greeter-protocol/build/libs'), dependenciesDir].join(':')]
             doLast {
                 def compileOpts = file('build/tmp/compileJava/java-compiler-args.txt').text.replaceAll("\n", " ")
                 logger.lifecycle "${options.forkOptions.executable} ${compileOpts}"
@@ -43,7 +50,7 @@ if (javaVersion == JavaVersion.VERSION_1_9) {
         }
     }
     task customJre(dependsOn: project(':greeter-server').tasks.jar) {
-        ext.appModulePaths = [project(':greeter-protocol').libsDir,
+        ext.appModulePaths = [dependenciesDir,
                               project(':greeter-server').libsDir]
 
         outputs.dir customJreOutput

@@ -1,6 +1,6 @@
 package example.greeter.protocol;
 
-import java.io.File;
+import example.greeter.files.FileReader;
 
 public class Protocol {
     private boolean inProgress = true;
@@ -16,12 +16,7 @@ public class Protocol {
         } else if (input.toLowerCase().contains("stats")) {
             return "I have " + Runtime.getRuntime().availableProcessors() + " processors";
         } else if (input.toLowerCase().contains("get")) {
-            File readme = new File("README.md");
-            if (readme.exists()) {
-                return Long.toString(readme.getTotalSpace()); // TODO read from file
-            } else {
-                return "No readme";
-            }
+            return FileReader.read();
         }
         return "Hello " + input;
     }
