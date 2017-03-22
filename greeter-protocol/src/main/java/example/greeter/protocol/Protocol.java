@@ -3,9 +3,10 @@ package example.greeter.protocol;
 import example.greeter.files.FileReader;
 
 public class Protocol {
-    private boolean inProgress = true;
+    private boolean inProgress;
 
     public String startConversation() {
+        inProgress = true;
         return "What is your name?";
     }
 
