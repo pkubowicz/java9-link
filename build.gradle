@@ -38,9 +38,13 @@ task customJre(dependsOn: jar) {
 build.dependsOn customJre
 
 if (sourceCompatibility == JavaVersion.VERSION_1_9) {
-    tasks.withType(JavaCompile) {
+    tasks.withType(AbstractCompile) {
         options.fork = true
-        options.forkOptions.executable = "${jdk9Home}/bin/javac"
+        options.forkOptions.javaHome = file(jdk9Home)
+        doLast {
+            def compileOpts = file('build/tmp/compileJava/java-compiler-args.txt').text.replaceAll("\n", " ")
+            logger.lifecycle "$jdk9Home/bin/javac ${compileOpts}"
+        }
     }
 } else {
     sourceSets.main.java.exclude("**/module-info.java")
