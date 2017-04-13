@@ -47,7 +47,7 @@ if (javaVersion == JavaVersion.VERSION_1_9) {
                               project(':greeter-server').libsDir]
 
         outputs.dir customJreOutput
-        ext.appModulePaths.each { outputs.dir it }
+        ext.appModulePaths.each { inputs.dir it }
 
         doLast {
             delete customJreOutput
