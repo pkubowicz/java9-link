@@ -38,14 +38,14 @@ if (javaVersion == JavaVersion.VERSION_1_9) {
             into dependenciesDir
         }
 
-        tasks.withType(JavaCompile) {
+        tasks.withType(AbstractCompile) {
             dependsOn copyDependenciesAsModules
             options.fork = true
-            options.forkOptions.executable = "${jdk9Home}/bin/javac"
+            options.forkOptions.javaHome = file(jdk9Home)
             options.compilerArgs = ['--module-path', [rootProject.file('greeter-protocol/build/libs'), dependenciesDir].join(':')]
             doLast {
                 def compileOpts = file('build/tmp/compileJava/java-compiler-args.txt').text.replaceAll("\n", " ")
-                logger.lifecycle "${options.forkOptions.executable} ${compileOpts}"
+                logger.lifecycle "$jdk9Home/bin/javac ${compileOpts}"
             }
         }
     }
