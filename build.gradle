@@ -6,6 +6,7 @@ final jdk9Home = "/usr/lib/jvm/jdk-9"
 final javaVersion = project.hasProperty('javaVersion') ? JavaVersion.toVersion(project.javaVersion)
         : JavaVersion.VERSION_1_9
 final customJreOutput = file("${buildDir}/custom-jre")
+final modulesDir = file('build/modules')
 
 subprojects {
     apply plugin: 'java'
@@ -24,43 +25,44 @@ subprojects {
 }
 
 task clean(type: Delete) {
-    delete 'build/custom-jre'
+    delete customJreOutput
+    delete modulesDir
     delete 'build/docker'
 }
 
 task build
 
 if (javaVersion == JavaVersion.VERSION_1_9) {
-    def dependenciesDir = rootProject.file('build/dependencies')
     subprojects {
-        task copyDependenciesAsModules(type: Sync) {
+        task copyDependenciesAsModules(type: Copy) {
             from configurations.runtime
-            into dependenciesDir
+            into modulesDir
         }
 
         tasks.withType(AbstractCompile) {
             dependsOn copyDependenciesAsModules
             options.fork = true
             options.forkOptions.javaHome = file(jdk9Home)
-            options.compilerArgs = ['--module-path', [rootProject.file('greeter-protocol/build/libs'), dependenciesDir].join(':')]
+            options.compilerArgs = ['--module-path', modulesDir]
             doLast {
                 def compileOpts = file('build/tmp/compileJava/java-compiler-args.txt').text.replaceAll("\n", " ")
                 logger.lifecycle "$jdk9Home/bin/javac ${compileOpts}"
             }
         }
     }
-    task customJre(dependsOn: project(':greeter-server').tasks.jar) {
-        ext.appModulePaths = [dependenciesDir,
-                              project(':greeter-server').libsDir]
-
+    task copyServerModule(type: Copy) {
+        from project(':greeter-server').tasks.jar
+        into modulesDir
+    }
+    task customJre(dependsOn: copyServerModule) {
+        inputs.dir modulesDir
         outputs.dir customJreOutput
-        ext.appModulePaths.each { outputs.dir it }
 
         doLast {
             delete customJreOutput
             exec {
                 executable "${jdk9Home}/bin/jlink"
-                args = ['--module-path', (["$jdk9Home/jmods"] + ext.appModulePaths).grep().join(':'),
+                args = ['--module-path', "$jdk9Home/jmods:$modulesDir",
                         '--add-modules', 'example.greeter.server',
                         '--output', customJreOutput,
                         '--compress=2', '--strip-debug'
