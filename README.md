@@ -1,4 +1,4 @@
-Demonstrates benefits from using `jlink` utility from Java 9 to create a custom runtime image.
+Demonstrates benefits from using `jlink` utility from Java 9 to create a custom runtime image. See also branch `external-libs`.
 
 ## Quick Start
 
