@@ -19,7 +19,7 @@ gradle build
 Running with Java 9 using modules:
 
 ```
-/usr/lib/jvm/jdk-9/bin/java --module-path /usr/lib/jvm/jdk-9/jmods:greeter-protocol/build/libs:greeter-server/build/libs -m example.greeter.server/example.greeter.server.Runner
+/usr/lib/jvm/jdk-9/bin/java --module-path greeter-protocol/build/libs:greeter-server/build/libs -m example.greeter.server/example.greeter.server.Runner
 ```
 or using classpath:
 ```
