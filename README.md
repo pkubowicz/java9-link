@@ -21,6 +21,10 @@ Running with Java 9 using modules:
 ```
 /usr/lib/jvm/jdk-9/bin/java --module-path /usr/lib/jvm/jdk-9/jmods:build/modules -m example.greeter.server/example.greeter.server.Runner
 ```
+or using classpath:
+```
+/usr/lib/jvm/jdk-9/bin/java -cp build/modules/greeter-protocol.jar:build/modules/greeter-server.jar:build/modules/guava-21.0.jar example.greeter.server.Runner
+```
 
 Checking against Java 8:
 
