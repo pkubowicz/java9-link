@@ -26,6 +26,7 @@ subprojects {
 
 task clean(type: Delete) {
     delete customJreOutput
+    delete 'build/custom-jre.tar.bz2'
     delete modulesDir
     delete 'build/docker'
 }
@@ -76,7 +77,14 @@ if (javaVersion == JavaVersion.VERSION_1_9) {
             }
         }
     }
-    build.dependsOn customJre
+    task compressCustomJre(type: Exec, dependsOn: customJre) {
+        inputs.dir "$buildDir/custom-jre"
+        outputs.dir "$buildDir/custom-jre.tar.bz2"
+        executable 'tar'
+        workingDir buildDir
+        args = ['cjf', 'custom-jre.tar.bz2', 'custom-jre']
+    }
+    build.dependsOn compressCustomJre
 
     task copyFilesForDocker(type: Sync, dependsOn: [customJre]) {
         from file('Dockerfile-9')
