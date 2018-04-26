@@ -2,7 +2,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '1.2.4' apply false
 }
 
-final jdk9Home = "/usr/lib/jvm/jdk-9"
 final javaVersion = project.hasProperty('javaVersion') ? JavaVersion.toVersion(project.javaVersion)
         : JavaVersion.VERSION_1_9
 final customJreOutput = file("${buildDir}/custom-jre")
@@ -31,15 +30,17 @@ task clean(type: Delete) {
 
 task build
 
-if (javaVersion == JavaVersion.VERSION_1_9) {
+if (javaVersion.isJava9Compatible()) {
+    final jdkHome = "/usr/lib/jvm/jdk-${javaVersion.majorVersion}"
     subprojects {
         tasks.withType(AbstractCompile) {
             options.fork = true
-            options.forkOptions.javaHome = file(jdk9Home)
+            options.forkOptions.javaHome = file(jdkHome)
+            options.sourcepath = files(sourceSets.main.java.srcDirs) // workaround for gradle/issues/3035
             options.compilerArgs = ['--module-path', rootProject.file('greeter-protocol/build/libs')]
             doLast {
                 def compileOpts = file('build/tmp/compileJava/java-compiler-args.txt').text.replaceAll("\n", " ")
-                logger.lifecycle "$jdk9Home/bin/javac ${compileOpts}"
+                logger.lifecycle "$jdkHome/bin/javac ${compileOpts}"
             }
         }
     }
@@ -53,8 +54,8 @@ if (javaVersion == JavaVersion.VERSION_1_9) {
         doLast {
             delete customJreOutput
             exec {
-                executable "${jdk9Home}/bin/jlink"
-                args = ['--module-path', (["$jdk9Home/jmods"] + ext.appModulePaths).grep().join(':'),
+                executable "${jdkHome}/bin/jlink"
+                args = ['--module-path', (["$jdkHome/jmods"] + ext.appModulePaths).grep().join(':'),
                         '--add-modules', 'example.greeter.server',
                         '--output', customJreOutput,
                         '--compress=2', '--strip-debug'
@@ -70,7 +71,7 @@ if (javaVersion == JavaVersion.VERSION_1_9) {
     }
     task compressCustomJre(type: Exec, dependsOn: customJre) {
         inputs.dir "$buildDir/custom-jre"
-        outputs.dir "$buildDir/custom-jre.tar.bz2"
+        outputs.file "$buildDir/custom-jre.tar.bz2"
         executable 'tar'
         workingDir buildDir
         args = ['cjf', 'custom-jre.tar.bz2', 'custom-jre']
@@ -108,7 +109,7 @@ task image(dependsOn: copyFilesForDocker) {
             executable 'docker'
             args = ['build', '-t', imageName]
 //            args += ['--pull']
-            if (javaVersion == JavaVersion.VERSION_1_9) {
+            if (javaVersion.isJava9Compatible()) {
                 args += ['--file', 'Dockerfile-9']
             }
             args += ['.']
